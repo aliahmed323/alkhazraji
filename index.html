@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0D2137">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="الخزرجي">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230D2137' rx='30' width='192' height='192'/><text x='96' y='85' text-anchor='middle' font-size='72'>🐟</text><text x='96' y='150' text-anchor='middle' fill='white' font-size='28' font-weight='900' font-family='sans-serif'>الخزرجي</text></svg>">
+  <title>الخزرجي - إدارة المطعم</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
+  <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#0D2137;--primary-l:#1a3a5c;--accent:#2563EB;--accent-l:#dbeafe;--success:#16a34a;--success-l:#dcfce7;--danger:#dc2626;--danger-l:#fee2e2;--warning:#d97706;--warning-l:#fef3c7;--info:#0891b2;--info-l:#cffafe;--bg:#f0f4f8;--card:#fff;--border:#e2e8f0;--text:#1e293b;--text-m:#64748b;--text-l:#94a3b8;--shadow:0 1px 3px rgba(0,0,0,.1);--shadow-md:0 4px 6px -1px rgba(0,0,0,.1);--shadow-lg:0 10px 15px -3px rgba(0,0,0,.1);--r:12px;--r-sm:8px;--r-lg:16px;--sidebar-w:250px;--topbar-h:60px;--nav-h:65px}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;overflow:hidden;height:100vh;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:'Cairo',sans-serif}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+
+#loading-screen{position:fixed;inset:0;z-index:9999;background:var(--primary);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:20px}
+.fish-anim{font-size:72px;animation:float 2.5s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-15px) rotate(-5deg)}}
+#loading-screen h2{font-size:28px;font-weight:800}
+#loading-screen p{color:rgba(255,255,255,.6)}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#auth-screen{position:fixed;inset:0;z-index:9000;background:var(--primary);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#auth-screen.on{display:flex}
+.auth-card{background:#fff;border-radius:var(--r-lg);padding:36px;width:100%;max-width:400px;box-shadow:var(--shadow-lg)}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo .fi{font-size:50px}
+.auth-logo h1{font-size:24px;font-weight:800;color:var(--primary);margin-top:10px}
+.auth-tabs{display:flex;margin-bottom:22px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:10px;text-align:center;cursor:pointer;background:var(--bg);font-weight:700;font-size:15px;color:var(--text-m);border:none;transition:.2s}
+.auth-tab.on{background:var(--primary);color:#fff}
+#auth-err{text-align:center;margin-top:12px;font-size:13px;color:var(--danger);min-height:18px}
+
+#app{display:none;height:100vh;flex-direction:row}
+#app.on{display:flex}
+.sidebar{width:var(--sidebar-w);background:var(--primary);display:flex;flex-direction:column;height:100vh;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:22px 20px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo span{color:#fff;font-size:21px;font-weight:800}
+.nav-menu{padding:12px 10px;flex:1}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:var(--r-sm);cursor:pointer;margin-bottom:4px;color:rgba(255,255,255,.6);font-size:15px;font-weight:700;transition:.2s;border:none;background:none;width:100%;text-align:right;min-height:48px}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.on{background:rgba(255,255,255,.15);color:#fff}
+.nav-item .ic{font-size:19px;width:22px;flex-shrink:0}
+.sb-foot{padding:12px 10px;border-top:1px solid rgba(255,255,255,.1)}
+
+.main-content{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+.topbar{height:var(--topbar-h);background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0;z-index:50}
+.menu-btn{display:none;background:none;border:none;font-size:26px;padding:4px;color:var(--primary)}
+.brand{font-size:17px;font-weight:900;color:var(--primary);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.brand-sep{width:2px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-m);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calc-btn{background:var(--primary);color:#fff;border:none;border-radius:var(--r-sm);padding:8px 12px;font-size:18px;display:flex;align-items:center;gap:5px;font-weight:700;transition:.2s;flex-shrink:0;min-height:40px}
+
+.page-wrap{flex:1;overflow-y:auto;padding:18px;-webkit-overflow-scrolling:touch}
+.page{display:none}
+.page.on{display:block;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;box-shadow:0 -2px 8px rgba(0,0,0,.08);height:var(--nav-h);z-index:80;align-items:center;justify-content:space-around;border-top:1px solid var(--border)}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text-m);font-size:12px;font-weight:700;flex:1;padding:8px 0;background:none;border:none;min-height:var(--nav-h)}
+.bn-item .ic{font-size:22px}
+.bn-item.on{color:var(--accent)}
+
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100}
+.sb-overlay.on{display:block}
+.mob-sidebar{position:fixed;top:0;right:0;bottom:0;width:var(--sidebar-w);background:var(--primary);z-index:101;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto}
+.mob-sidebar.on{transform:translateX(0)}
+
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px;border:1px solid rgba(0,0,0,.03)}
+.card-body{padding:16px}
+.card-head{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:16px;font-weight:800;color:var(--primary)}
+
+.stats-grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:14px}
+.stat-card{background:#fff;border-radius:var(--r);padding:15px;box-shadow:var(--shadow);border-right:4px solid var(--accent)}
+.stat-card.g{border-right-color:var(--success)} .stat-card.r{border-right-color:var(--danger)} .stat-card.o{border-right-color:var(--warning)} .stat-card.b{border-right-color:var(--accent)} .stat-card.n{border-right-color:var(--primary)} .stat-card.i{border-right-color:var(--info)}
+.stat-lbl{font-size:13px;color:var(--text-m);font-weight:600;margin-bottom:5px}
+.stat-val{font-size:19px;font-weight:800}
+.stat-val.g{color:var(--success)} .stat-val.r{color:var(--danger)} .stat-val.o{color:var(--warning)}
+
+.summary-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.summary-card{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);border-top:4px solid var(--primary)}
+.summary-card.today{border-top-color:var(--accent)}
+.summary-card.week{border-top-color:var(--success)}
+.summary-card .stitle{font-size:16px;font-weight:800;color:var(--primary);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.summary-line{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.summary-line:last-child{border-bottom:none}
+.summary-line .sl-label{font-size:14px;font-weight:600;color:var(--text-m)}
+.summary-line .sl-val{font-size:16px;font-weight:800}
+.sl-val.green{color:var(--success)} .sl-val.red{color:var(--danger)} .sl-val.orange{color:var(--warning)} .sl-val.blue{color:var(--accent)}
+.expected-card{background:linear-gradient(135deg,#0D2137 0%,#1a3a5c 100%);color:#fff;border-radius:var(--r);padding:20px;margin-bottom:14px;box-shadow:var(--shadow-md)}
+.expected-card .ec-title{font-size:14px;font-weight:700;opacity:.8;margin-bottom:6px}
+.expected-card .ec-val{font-size:26px;font-weight:900}
+
+.period-tabs{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.period-tab{padding:7px 15px;border-radius:20px;font-size:14px;font-weight:700;border:2px solid var(--border);background:#fff;cursor:pointer;color:var(--text-m);transition:.2s;min-height:38px}
+.period-tab.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:var(--r-sm);border:none;font-size:15px;font-weight:700;transition:.15s;min-height:44px;white-space:nowrap}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--primary);color:#fff} .btn-success{background:var(--success);color:#fff} .btn-danger{background:var(--danger);color:#fff}
+.btn-warning{background:var(--warning);color:#fff}
+.btn-outline{background:transparent;border:2px solid var(--border);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:13px;min-height:36px}
+.btn-block{width:100%}
+.btn-icon{padding:8px;min-height:auto;border-radius:7px}
+.act-btns{display:flex;gap:4px}
+
+.form-group{margin-bottom:13px}
+.form-label{display:block;font-size:14px;font-weight:700;color:var(--primary);margin-bottom:5px}
+.form-control{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--r-sm);font-size:16px;color:var(--text);background:#fff;transition:.2s;-webkit-appearance:none;appearance:none;min-height:48px}
+.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.form-control[readonly]{background:var(--bg)}
+.fish-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:13px}
+.fish-btn{padding:14px 8px;text-align:center;border-radius:var(--r-sm);border:2px solid var(--border);font-size:16px;font-weight:700;background:#fff;transition:.2s;color:var(--text);min-height:52px}
+.fish-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pay-btns{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.pay-btn{flex:1;padding:11px;text-align:center;border-radius:var(--r-sm);border:2px solid var(--border);font-size:14px;font-weight:700;background:#fff;transition:.2s;min-width:85px;min-height:48px}
+.pay-btn.cash{background:var(--success);color:#fff;border-color:var(--success)}
+.pay-btn.debt{background:var(--danger);color:#fff;border-color:var(--danger)}
+.pay-btn.partial{background:var(--warning);color:#fff;border-color:var(--warning)}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{background:var(--bg);padding:10px 12px;text-align:right;font-weight:700;color:var(--text-m);border-bottom:2px solid var(--border);font-size:13px;white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:hover td{background:#f8fafc}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.bs{background:var(--success-l);color:var(--success)} .bd{background:var(--danger-l);color:var(--danger)} .bw{background:var(--warning-l);color:var(--warning)} .bi{background:var(--info-l);color:var(--info)} .bp{background:var(--accent-l);color:var(--accent)} .bg-b{background:var(--bg);color:var(--text-m)}
+
+.empty{text-align:center;padding:35px 20px;color:var(--text-m)}
+.empty .ic{font-size:48px;margin-bottom:10px}
+.empty h3{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.page-head h2{font-size:21px;font-weight:800;color:var(--primary)}
+
+.m-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.m-overlay.on{display:flex}
+.modal{background:#fff;border-radius:var(--r-lg);width:100%;max-width:480px;max-height:93vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .25s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.m-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;border-radius:var(--r-lg) var(--r-lg) 0 0}
+.m-title{font-size:17px;font-weight:800;color:var(--primary)}
+.m-close{background:none;border:none;font-size:22px;color:var(--text-m);padding:4px;border-radius:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.m-body{padding:18px}
+.m-foot{padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;border-radius:0 0 var(--r-lg) var(--r-lg)}
+
+.calc-disp{background:var(--bg);border-radius:var(--r-sm);padding:13px 15px;font-size:26px;font-weight:800;text-align:left;direction:ltr;margin-bottom:13px;min-height:60px;word-break:break-all;color:var(--primary);border:2px solid var(--border)}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ck{padding:14px;text-align:center;border-radius:var(--r-sm);font-size:18px;font-weight:700;border:none;transition:.15s;min-height:52px}
+.ck:active{transform:scale(.93)}
+.ck-num{background:var(--bg);color:var(--text)} .ck-op{background:var(--accent-l);color:var(--accent)} .ck-eq{background:var(--success);color:#fff} .ck-clr{background:var(--danger-l);color:var(--danger)} .ck-del{background:var(--warning-l);color:var(--warning)}
+
+#toast-wrap{position:fixed;bottom:calc(var(--nav-h) + 10px);right:14px;z-index:9000;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{padding:12px 16px;border-radius:var(--r-sm);font-size:14px;font-weight:700;color:#fff;min-width:200px;max-width:300px;box-shadow:var(--shadow-lg);animation:slideIn .3s ease;pointer-events:auto}
+@keyframes slideIn{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
+.t-success{background:var(--success)} .t-error{background:var(--danger)} .t-warning{background:var(--warning)} .t-info{background:var(--info)}
+
+.debt-card{background:#fff;border-radius:var(--r);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);border-right:4px solid var(--danger)}
+.debt-card.cust{border-right-color:var(--warning)}
+.supplier-card{background:#fff;border-radius:var(--r);padding:16px;margin-bottom:11px;box-shadow:var(--shadow)}
+.s-avatar{width:46px;height:46px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;flex-shrink:0}
+.prog-bar{height:8px;background:var(--bg);border-radius:10px;margin:8px 0;overflow:hidden}
+.prog-fill{height:100%;border-radius:10px;background:var(--success);transition:width .5s ease}
+.sec-title{font-size:15px;font-weight:800;color:var(--primary);margin:18px 0 11px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.chart-box{position:relative;height:240px}
+.auto-total{background:var(--accent-l);font-weight:800;color:var(--accent)}
+.auto-total-green{background:var(--success-l);font-weight:800;color:var(--success)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.sub-label{font-size:12px;color:var(--text-l);margin-top:3px}
+.install-banner{display:none;background:linear-gradient(135deg,var(--accent),var(--primary));color:#fff;padding:12px 16px;border-radius:var(--r);margin-bottom:14px;cursor:pointer;text-align:center;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .menu-btn{display:flex}
+  .bottom-nav{display:flex}
+  .page-wrap{padding:14px 11px calc(var(--nav-h) + 14px)}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .summary-row{grid-template-columns:1fr}
+  .topbar{padding:0 11px}
+  #toast-wrap{right:10px;left:10px}
+  .toast{min-width:unset;max-width:100%}
+}
+@media(min-width:769px){#toast-wrap{bottom:14px}}
+.df{display:flex}.ac{align-items:center}.jb{justify-content:space-between}.g8{gap:8px}.g12{gap:12px}.fw8{font-weight:800}.fs13{font-size:13px}.tg{color:var(--success)}.tr{color:var(--danger)}.to{color:var(--warning)}.tm{color:var(--text-m)}
+.hidden{display:none!important}
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="fish-anim">🐟</div>
+  <h2>الخزرجي</h2>
+  <p>نظام إدارة مطعم السمك المشوي</p>
+  <div class="spinner"></div>
+</div>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="fi">🐟</div><h1>الخزرجي</h1></div>
+    <div class="auth-tabs">
+      <button class="auth-tab on" id="tab-login" onclick="authTab('login')">دخول</button>
+      <button class="auth-tab" id="tab-reg" onclick="authTab('reg')">حساب جديد</button>
+    </div>
+    <div id="pnl-login">
+      <div class="form-group"><label class="form-label">البريد الإلكتروني</label><input type="email" class="form-control" id="login-email" placeholder="example@email.com" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">كلمة المرور</label><input type="password" class="form-control" id="login-pass" placeholder="••••••••" dir="ltr"></div>
+      <button class="btn btn-primary btn-block" onclick="doLogin()">تسجيل الدخول</button>
+    </div>
+    <div id="pnl-reg" class="hidden">
+      <div class="form-group"><label class="form-label">البريد الإلكتروني</label><input type="email" class="form-control" id="reg-email" placeholder="example@email.com" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">كلمة المرور (6 أحرف على الأقل)</label><input type="password" class="form-control" id="reg-pass" placeholder="••••••••" dir="ltr"></div>
+      <button class="btn btn-success btn-block" onclick="doRegister()">إنشاء الحساب</button>
+    </div>
+    <div id="auth-err"></div>
+  </div>
+</div>
+
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<div class="mob-sidebar" id="mob-sidebar"></div>
+
+<div id="app">
+  <aside class="sidebar">
+    <div class="sb-logo"><span style="font-size:28px;">🐟</span><span>الخزرجي</span></div>
+    <nav class="nav-menu" id="desk-nav"></nav>
+    <div class="sb-foot"><button class="nav-item" onclick="doLogout()"><span class="ic">🚪</span>تسجيل الخروج</button></div>
+  </aside>
+  <div class="main-content">
+    <div class="topbar">
+      <button class="menu-btn" onclick="openSidebar()">☰</button>
+      <div class="brand">🐟 الخزرجي</div>
+      <div class="brand-sep"></div>
+      <div class="topbar-title" id="page-title">الرئيسية</div>
+      <button class="calc-btn" onclick="openM('m-calc')">🧮</button>
+    </div>
+    <div class="page-wrap" id="page-wrap">
+
+      <div class="page on" id="page-dashboard"><div id="dash-cnt"></div></div>
+
+      <div class="page" id="page-sales">
+        <div class="page-head"><h2>📋 المبيعات</h2><button class="btn btn-success" onclick="openAddSale()">➕ بيع جديد</button></div>
+        <div class="period-tabs" id="sales-tabs"></div>
+        <div class="card"><div class="card-body" id="sales-summ"></div></div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>الزبون</th><th>النوع</th><th>الوزن</th><th>سعر/كغ</th><th>الإجمالي</th><th>الدفع</th><th>المصاريف</th><th>إجراء</th></tr></thead><tbody id="sales-body"></tbody></table></div></div></div>
+      </div>
+
+      <div class="page" id="page-purchases">
+        <div class="page-head"><h2>🛒 المشتريات</h2><button class="btn btn-primary" onclick="openAddPurchase()">➕ شراء جديد</button></div>
+        <div class="period-tabs" id="purchases-tabs"></div>
+        <div class="card"><div class="card-body" id="purchases-summ"></div></div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>المورد</th><th>النوع</th><th>العدد</th><th>الوزن</th><th>الإجمالي</th><th>الدفع</th><th>الدين</th><th>إجراء</th></tr></thead><tbody id="purchases-body"></tbody></table></div></div></div>
+      </div>
+
+      <div class="page" id="page-expenses">
+        <div class="page-head"><h2>💸 المصاريف</h2><button class="btn btn-warning" onclick="openAddExpense()">➕ مصروف جديد</button></div>
+        <div class="period-tabs" id="expenses-tabs"></div>
+        <div class="card"><div class="card-body" id="expenses-summ"></div></div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>النوع</th><th>الكمية</th><th>سعر الوحدة</th><th>المبلغ</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="expenses-body"></tbody></table></div></div></div>
+      </div>
+
+      <div class="page" id="page-profits">
+        <div class="page-head"><h2>💰 الأرباح</h2></div>
+        <div class="period-tabs" id="profits-tabs"></div>
+        <div class="card"><div class="card-body" id="profits-summ"></div></div>
+        <div id="profits-list"></div>
+      </div>
+
+      <div class="page" id="page-suppliers">
+        <div class="page-head"><h2>👥 الموردون</h2><button class="btn btn-primary" onclick="openM('m-add-sup')">➕ مورد جديد</button></div>
+        <div id="suppliers-list"></div>
+      </div>
+
+      <div class="page" id="page-debts">
+        <div class="page-head"><h2>💳 الديون</h2></div>
+        <div class="stats-grid">
+          <div class="stat-card r"><div class="stat-lbl">⬅ ديون عليك (للموردين)</div><div class="stat-val r" id="total-sup-debt">0 د.ع</div></div>
+          <div class="stat-card o"><div class="stat-lbl">➡ ديون لك (من الزبائن)</div><div class="stat-val o" id="total-cust-debt">0 د.ع</div></div>
+        </div>
+        <div class="sec-title">⬅ ديون عليك (للموردين)</div>
+        <div id="debts-sup-list"></div>
+        <div class="sec-title">➡ ديون لك (من الزبائن)</div>
+        <div id="debts-cust-list"></div>
+        <div class="sec-title">آخر المدفوعات</div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>الجهة</th><th>المبلغ</th><th>ملاحظات</th><th></th></tr></thead><tbody id="payments-body"></tbody></table></div></div></div>
+      </div>
+
+      <div class="page" id="page-inventory">
+        <div class="page-head"><h2>📦 المخزون</h2></div>
+        <div class="sec-title">🐟 مخزون الأسماك</div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>النوع</th><th>الداخل</th><th>المباع</th><th>المتبقي</th><th>الحالة</th></tr></thead><tbody id="fish-inv-body"></tbody></table></div></div></div>
+        <div class="sec-title">🛍️ مخزون المواد</div>
+        <div class="card"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>المادة</th><th>المشترى</th><th>المستهلك</th><th>المتبقي</th></tr></thead><tbody id="mat-inv-body"></tbody></table></div></div></div>
+      </div>
+
+      <div class="page" id="page-reports">
+        <div class="page-head"><h2>📊 التقارير</h2></div>
+        <div class="period-tabs" id="reports-tabs"></div>
+        <div class="stats-grid" id="reports-stats"></div>
+        <div class="card"><div class="card-head"><span class="card-title">مبيعات vs مصاريف (آخر 7 أيام)</span></div><div class="card-body"><div class="chart-box"><canvas id="reports-chart"></canvas></div></div></div>
+        <div class="card"><div class="card-head"><span class="card-title">تصدير</span></div><div class="card-body df g8"><button class="btn btn-danger" onclick="exportPDF()">📄 PDF</button><button class="btn btn-success" onclick="exportExcel()">📊 Excel</button></div></div>
+      </div>
+
+      <div class="page" id="page-settings">
+        <div class="page-head"><h2>⚙️ الإعدادات</h2></div>
+        <div class="card" style="max-width:500px;">
+          <div class="card-head"><span class="card-title">إعدادات المطعم</span></div>
+          <div class="card-body">
+            <div class="form-group"><label class="form-label">اسم المطعم</label><input type="text" class="form-control" id="s-shop-name" value="الخزرجي"></div>
+          </div>
+        </div>
+        <div class="card" style="max-width:500px;">
+          <div class="card-head"><span class="card-title">💰 الربح المتوقع لكل كيلو (د.ع)</span></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-m);margin-bottom:12px;line-height:1.8;">يُستخدم لحساب الربح المتوقع من المخزون المتبقي</p>
+            <div class="grid2">
+              <div class="form-group"><label class="form-label">🐟 شبوط - ربح/كغ</label><input type="number" step="500" class="form-control" id="s-profit-shaboot" value="5000"></div>
+              <div class="form-group"><label class="form-label">🐟 بني - ربح/كغ</label><input type="number" step="500" class="form-control" id="s-profit-buni" value="5000"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="max-width:500px;">
+          <div class="card-head"><span class="card-title">مصاريف ثابتة لكل بيعة (د.ع)</span></div>
+          <div class="card-body">
+            <div class="grid2">
+              <div class="form-group"><label class="form-label">🛍️ أكياس</label><input type="number" step="500" class="form-control" id="s-exp-bags" value="500"></div>
+              <div class="form-group"><label class="form-label">🔥 فحم</label><input type="number" step="500" class="form-control" id="s-exp-charcoal" value="1000"></div>
+            </div>
+            <div class="form-group"><label class="form-label">📦 مصاريف أخرى</label><input type="number" step="500" class="form-control" id="s-exp-other" value="0"></div>
+          </div>
+        </div>
+        <button class="btn btn-success btn-block" style="max-width:500px;margin-bottom:14px;" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+        <div class="card" style="max-width:500px;">
+          <div class="card-head"><span class="card-title">الحساب</span></div>
+          <div class="card-body"><button class="btn btn-outline btn-block" onclick="doLogout()">🚪 تسجيل الخروج</button></div>
+        </div>
+        <div class="card" style="max-width:500px;border:2px solid var(--danger);">
+          <div class="card-head"><span class="card-title" style="color:var(--danger);">⚠️ منطقة الخطر</span></div>
+          <div class="card-body"><button class="btn btn-danger btn-block" onclick="confirmReset()">🗑️ حذف كل البيانات</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bn-item on" data-p="dashboard" onclick="goto('dashboard')"><span class="ic">🏠</span><span>الرئيسية</span></button>
+  <button class="bn-item" data-p="sales" onclick="goto('sales')"><span class="ic">📋</span><span>المبيعات</span></button>
+  <button class="bn-item" data-p="purchases" onclick="goto('purchases')"><span class="ic">🛒</span><span>الشراء</span></button>
+  <button class="bn-item" data-p="profits" onclick="goto('profits')"><span class="ic">💰</span><span>الأرباح</span></button>
+  <button class="bn-item" data-p="more" onclick="openSidebar()"><span class="ic">☰</span><span>المزيد</span></button>
+</nav>
+
+<div id="toast-wrap"></div>
+
+<!-- CALCULATOR -->
+<div class="m-overlay" id="m-calc"><div class="modal" style="max-width:310px;"><div class="m-head"><span class="m-title">🧮 الحاسبة</span><button class="m-close" onclick="closeM('m-calc')">✕</button></div><div class="m-body"><div class="calc-disp" id="calc-disp">0</div><div class="calc-grid"><button class="ck ck-clr" onclick="ca('C')" style="grid-column:span 2;">مسح</button><button class="ck ck-del" onclick="ca('DEL')">⌫</button><button class="ck ck-op" onclick="ca('/')">÷</button><button class="ck ck-num" onclick="ca('7')">7</button><button class="ck ck-num" onclick="ca('8')">8</button><button class="ck ck-num" onclick="ca('9')">9</button><button class="ck ck-op" onclick="ca('*')">×</button><button class="ck ck-num" onclick="ca('4')">4</button><button class="ck ck-num" onclick="ca('5')">5</button><button class="ck ck-num" onclick="ca('6')">6</button><button class="ck ck-op" onclick="ca('-')">-</button><button class="ck ck-num" onclick="ca('1')">1</button><button class="ck ck-num" onclick="ca('2')">2</button><button class="ck ck-num" onclick="ca('3')">3</button><button class="ck ck-op" onclick="ca('+')">+</button><button class="ck ck-num" onclick="ca('0')" style="grid-column:span 2;">0</button><button class="ck ck-num" onclick="ca('.')">.</button><button class="ck ck-eq" onclick="ca('=')">=</button></div></div></div></div>
+
+<!-- SALE MODAL -->
+<div class="m-overlay" id="m-sale"><div class="modal"><div class="m-head"><span class="m-title" id="sale-m-title">➕ بيع جديد</span><button class="m-close" onclick="closeM('m-sale')">✕</button></div><div class="m-body">
+  <input type="hidden" id="sale-edit-id">
+  <div class="form-group"><label class="form-label">نوع السمك</label><div class="fish-grid" id="sale-fish-grid"></div><input type="hidden" id="sale-fish"></div>
+  <div class="form-group"><label class="form-label">اسم الزبون</label><input type="text" class="form-control" id="sale-cust" placeholder="اسم الزبون"></div>
+  <div class="grid3">
+    <div class="form-group"><label class="form-label">الوزن (كغم)</label><input type="number" step="0.5" class="form-control" id="sale-weight" oninput="calcSaleTotal()"></div>
+    <div class="form-group"><label class="form-label">العدد</label><input type="number" step="1" class="form-control" id="sale-qty"></div>
+    <div class="form-group"><label class="form-label">سعر/كغ (د.ع)</label><input type="number" step="500" class="form-control" id="sale-price" oninput="calcSaleTotal()"></div>
+  </div>
+  <div class="form-group"><label class="form-label">الإجمالي (د.ع)</label><input type="number" class="form-control auto-total-green" id="sale-total" readonly></div>
+  <div class="form-group"><label class="form-label">طريقة الدفع</label>
+    <div class="pay-btns"><button class="pay-btn cash" id="spb-cash" onclick="selSalePay('cash')">💵 نقد</button><button class="pay-btn" id="spb-debt" onclick="selSalePay('debt')">📝 دين</button></div>
+    <input type="hidden" id="sale-paytype" value="cash">
+  </div>
+  <div class="sec-title">مصاريف البيعة الثابتة</div>
+  <div class="grid3">
+    <div class="form-group"><label class="form-label">🛍️ أكياس</label><input type="number" step="500" class="form-control" id="sale-exp-bags"></div>
+    <div class="form-group"><label class="form-label">🔥 فحم</label><input type="number" step="500" class="form-control" id="sale-exp-charcoal"></div>
+    <div class="form-group"><label class="form-label">📦 أخرى</label><input type="number" step="500" class="form-control" id="sale-exp-other"></div>
+  </div>
+  <div class="form-group"><label class="form-label">التاريخ</label><input type="date" class="form-control" id="sale-date"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="sale-notes" placeholder="..."></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-sale')">إلغاء</button><button class="btn btn-success" id="sale-submit-btn" onclick="submitSale()">💾 حفظ</button></div></div></div>
+
+<!-- PURCHASE MODAL -->
+<div class="m-overlay" id="m-purchase"><div class="modal"><div class="m-head"><span class="m-title" id="pur-m-title">➕ شراء جديد</span><button class="m-close" onclick="closeM('m-purchase')">✕</button></div><div class="m-body">
+  <input type="hidden" id="pur-edit-id">
+  <div class="form-group"><label class="form-label">المورد</label><select class="form-control" id="pur-supplier"></select></div>
+  <div class="form-group"><label class="form-label">نوع السمك</label><div class="fish-grid" id="pur-fish-grid"></div><input type="hidden" id="pur-fish"></div>
+  <div class="grid3">
+    <div class="form-group"><label class="form-label">عدد السمكات</label><input type="number" step="1" class="form-control" id="pur-count" oninput="calcPurTotal()"></div>
+    <div class="form-group"><label class="form-label">م. الوزن (كغم)</label><input type="number" step="0.5" class="form-control" id="pur-avgw" oninput="calcPurTotal()"></div>
+    <div class="form-group"><label class="form-label">سعر/كغ (د.ع)</label><input type="number" step="500" class="form-control" id="pur-price" oninput="calcPurTotal()"></div>
+  </div>
+  <div class="grid2">
+    <div class="form-group"><label class="form-label">الوزن الكلي</label><input type="text" class="form-control auto-total" id="pur-weight" readonly><div class="sub-label">= العدد × م.الوزن</div></div>
+    <div class="form-group"><label class="form-label">الإجمالي (د.ع)</label><input type="text" class="form-control auto-total" id="pur-total" readonly><div class="sub-label">= الوزن × سعر/كغ</div></div>
+  </div>
+  <div class="form-group"><label class="form-label">طريقة الدفع</label>
+    <div class="pay-btns"><button class="pay-btn cash" id="pb-cash" onclick="selPay('cash')">نقد كامل</button><button class="pay-btn" id="pb-debt" onclick="selPay('debt')">دين كامل</button><button class="pay-btn" id="pb-partial" onclick="selPay('partial')">جزء + دين</button></div>
+    <input type="hidden" id="pur-paytype" value="cash">
+  </div>
+  <div class="form-group hidden" id="partial-grp"><label class="form-label">المبلغ المدفوع نقداً</label><input type="number" step="500" class="form-control" id="pur-paid" oninput="calcPartDebt()"><div style="margin-top:6px;font-size:14px;color:var(--danger);font-weight:700;" id="partial-lbl"></div></div>
+  <div class="form-group"><label class="form-label">التاريخ</label><input type="date" class="form-control" id="pur-date"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="pur-notes" placeholder="..."></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-purchase')">إلغاء</button><button class="btn btn-primary" id="pur-submit-btn" onclick="submitPurchase()">💾 حفظ</button></div></div></div>
+
+<!-- EXPENSE MODAL -->
+<div class="m-overlay" id="m-expense"><div class="modal"><div class="m-head"><span class="m-title" id="exp-m-title">➕ مصروف جديد</span><button class="m-close" onclick="closeM('m-expense')">✕</button></div><div class="m-body">
+  <input type="hidden" id="exp-edit-id">
+  <div class="form-group"><label class="form-label">النوع</label>
+    <select class="form-control" id="exp-type" onchange="onExpTypeChange()">
+      <option value="فحم">🔥 فحم (أكياس)</option><option value="بهارات">🌿 بهارات</option><option value="ملح">🧂 ملح</option><option value="أكياس">🛍️ أكياس</option><option value="وقود">⛽ وقود</option><option value="نقل">🚚 نقل</option><option value="أجور">👷 أجور</option><option value="كهرباء">⚡ كهرباء</option><option value="ماء">💧 ماء</option><option value="صيانة">🔧 صيانة</option><option value="أخرى">📦 أخرى</option>
+    </select>
+  </div>
+  <div class="grid3">
+    <div class="form-group"><label class="form-label" id="exp-qty-lbl">الكمية (كيس)</label><input type="number" step="1" class="form-control" id="exp-qty" oninput="calcExpTotal()"></div>
+    <div class="form-group"><label class="form-label" id="exp-up-lbl">سعر الكيس</label><input type="number" step="500" class="form-control" id="exp-uprice" oninput="calcExpTotal()"></div>
+    <div class="form-group"><label class="form-label">الإجمالي</label><input type="number" class="form-control auto-total" id="exp-amount" readonly></div>
+  </div>
+  <div class="form-group"><label class="form-label">التاريخ</label><input type="date" class="form-control" id="exp-date"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="exp-notes" placeholder="..."></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-expense')">إلغاء</button><button class="btn btn-warning" id="exp-submit-btn" onclick="submitExpense()">💾 حفظ</button></div></div></div>
+
+<!-- ADD SUPPLIER -->
+<div class="m-overlay" id="m-add-sup"><div class="modal"><div class="m-head"><span class="m-title">➕ مورد جديد</span><button class="m-close" onclick="closeM('m-add-sup')">✕</button></div><div class="m-body">
+  <div class="form-group"><label class="form-label">الاسم</label><input type="text" class="form-control" id="sup-name"></div>
+  <div class="form-group"><label class="form-label">الهاتف</label><input type="tel" class="form-control" id="sup-phone" dir="ltr"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="sup-notes"></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-add-sup')">إلغاء</button><button class="btn btn-success" onclick="submitSupplier()">💾 حفظ</button></div></div></div>
+
+<!-- EDIT SUPPLIER -->
+<div class="m-overlay" id="m-edit-sup"><div class="modal"><div class="m-head"><span class="m-title">✏️ تعديل مورد</span><button class="m-close" onclick="closeM('m-edit-sup')">✕</button></div><div class="m-body">
+  <input type="hidden" id="edit-sup-id">
+  <div class="form-group"><label class="form-label">الاسم</label><input type="text" class="form-control" id="edit-sup-name"></div>
+  <div class="form-group"><label class="form-label">الهاتف</label><input type="tel" class="form-control" id="edit-sup-phone" dir="ltr"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="edit-sup-notes"></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-edit-sup')">إلغاء</button><button class="btn btn-success" onclick="updateSupplier()">💾 حفظ</button></div></div></div>
+
+<!-- SUPPLIER PAYMENT -->
+<div class="m-overlay" id="m-add-pay"><div class="modal"><div class="m-head"><span class="m-title">💳 دفعة لمورد</span><button class="m-close" onclick="closeM('m-add-pay')">✕</button></div><div class="m-body">
+  <input type="hidden" id="pay-sup-id">
+  <div class="form-group"><label class="form-label">المورد</label><input type="text" class="form-control" id="pay-sup-name" readonly></div>
+  <div class="form-group"><label class="form-label">الدين الحالي</label><input type="text" class="form-control" id="pay-cur-debt" readonly style="color:var(--danger);font-weight:800;"></div>
+  <div class="form-group"><label class="form-label">المبلغ (د.ع)</label><input type="number" step="500" class="form-control" id="pay-amount"></div>
+  <div class="form-group"><label class="form-label">التاريخ</label><input type="date" class="form-control" id="pay-date"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="pay-notes"></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-add-pay')">إلغاء</button><button class="btn btn-success" onclick="submitPayment()">💾 تسجيل</button></div></div></div>
+
+<!-- CUSTOMER PAYMENT -->
+<div class="m-overlay" id="m-cust-pay"><div class="modal"><div class="m-head"><span class="m-title">💳 دفعة من زبون</span><button class="m-close" onclick="closeM('m-cust-pay')">✕</button></div><div class="m-body">
+  <input type="hidden" id="cp-name-val">
+  <div class="form-group"><label class="form-label">الزبون</label><input type="text" class="form-control" id="cp-cust-name" readonly></div>
+  <div class="form-group"><label class="form-label">الدين الحالي</label><input type="text" class="form-control" id="cp-cur-debt" readonly style="color:var(--danger);font-weight:800;"></div>
+  <div class="form-group"><label class="form-label">المبلغ (د.ع)</label><input type="number" step="500" class="form-control" id="cp-amount"></div>
+  <div class="form-group"><label class="form-label">التاريخ</label><input type="date" class="form-control" id="cp-date"></div>
+  <div class="form-group"><label class="form-label">ملاحظات</label><input type="text" class="form-control" id="cp-notes"></div>
+</div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-cust-pay')">إلغاء</button><button class="btn btn-success" onclick="submitCustPayment()">💾 تسجيل</button></div></div></div>
+
+<!-- SUPPLIER DETAIL -->
+<div class="m-overlay" id="m-sup-detail"><div class="modal"><div class="m-head"><span class="m-title" id="sup-detail-title">تفاصيل المورد</span><button class="m-close" onclick="closeM('m-sup-detail')">✕</button></div><div class="m-body" id="sup-detail-body"></div></div></div>
+
+<!-- CONFIRM RESET -->
+<div class="m-overlay" id="m-confirm-reset"><div class="modal" style="max-width:360px;"><div class="m-head"><span class="m-title" style="color:var(--danger);">⚠️ تأكيد الحذف</span><button class="m-close" onclick="closeM('m-confirm-reset')">✕</button></div><div class="m-body"><p style="font-size:15px;font-weight:600;line-height:1.8;">سيتم حذف <strong>جميع البيانات</strong> نهائياً.</p><p style="margin-top:11px;color:var(--text-m);font-size:14px;">اكتب <strong>تأكيد</strong> للمتابعة:</p><input type="text" class="form-control" id="reset-word" placeholder="تأكيد" style="margin-top:8px;"></div><div class="m-foot"><button class="btn btn-outline" onclick="closeM('m-confirm-reset')">إلغاء</button><button class="btn btn-danger" onclick="doReset()">🗑️ حذف نهائي</button></div></div></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

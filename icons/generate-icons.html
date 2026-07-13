@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سمكنا — توليد أيقونات PWA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #F0F4F8;
+      padding: 32px 20px;
+      color: #1A2332;
+      direction: rtl;
+    }
+    h1 {
+      font-size: 26px; font-weight: 700; color: #0D2137;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px; color: #546E7A; margin-bottom: 32px;
+    }
+    .instructions {
+      background: #E3F2FD; border-right: 4px solid #1976D2;
+      border-radius: 8px; padding: 16px 20px;
+      margin-bottom: 32px; font-size: 14px; line-height: 1.8;
+      color: #0D47A1;
+    }
+    .instructions h3 { margin-bottom: 8px; font-size: 16px; }
+    .instructions ol { padding-right: 20px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .icon-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(13,33,55,0.08);
+      padding: 20px;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .icon-card canvas { border-radius: 12px; }
+    .icon-label { font-size: 13px; font-weight: 600; color: #546E7A; }
+    .dl-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px;
+      background: #1976D2; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.2s;
+    }
+    .dl-btn:hover { background: #1565C0; }
+    .dl-all-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 32px;
+      background: #0D2137; color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-bottom: 32px;
+      transition: background 0.2s;
+    }
+    .dl-all-btn:hover { background: #1a3a5c; }
+    .warning {
+      background: #FFF3E0; border-right: 4px solid #E65100;
+      border-radius: 8px; padding: 14px 18px;
+      font-size: 13px; color: #8D4000;
+      margin-bottom: 24px;
+    }
+    .file-structure {
+      background: #1A2332; color: #E8EAF6;
+      border-radius: 10px; padding: 20px;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      line-height: 1.8; margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐟 توليد أيقونات سمكنا PWA</h1>
+  <p class="subtitle">أداة توليد أيقونات التطبيق بكل الأحجام المطلوبة</p>
+
+  <div class="instructions">
+    <h3>📋 تعليمات الاستخدام:</h3>
+    <ol>
+      <li>افتح هذا الملف في المتصفح (Chrome أو Edge يُفضَّل)</li>
+      <li>انقر على زر "تحميل الكل" لتنزيل جميع الأيقونات دفعة واحدة</li>
+      <li>أو انقر على زر "تحميل" بجانب كل حجم بشكل منفرد</li>
+      <li>انقل الملفات المحمَّلة إلى مجلد <code>icons/</code> في مشروعك</li>
+    </ol>
+  </div>
+
+  <div class="warning">
+    ⚠️ <strong>ملاحظة:</strong> بعض المتصفحات قد تحظر تنزيل ملفات متعددة. إذا لم تعمل "تحميل الكل"، استخدم أزرار التحميل الفردي.
+  </div>
+
+  <button class="dl-all-btn" onclick="downloadAll()">
+    ⬇️ تحميل جميع الأيقونات
+  </button>
+
+  <div class="grid" id="icons-grid"></div>
+
+  <div class="file-structure">
+    <strong>🗂️ البنية المطلوبة:</strong><br><br>
+    alkhazraji/<br>
+    └── icons/<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-72.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-96.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-128.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-144.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-152.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-192.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── icon-384.png<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;└── icon-512.png
+  </div>
+
+  <script>
+    /* ─── Icon sizes to generate ─── */
+    const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+
+    /* ─── Draw a single icon onto a canvas element ─── */
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      canvas.width  = size;
+      canvas.height = size;
+
+      /* Background — dark navy */
+      ctx.fillStyle = '#0D2137';
+      roundRect(ctx, 0, 0, size, size, size * 0.18);
+      ctx.fill();
+
+      /* Subtle gradient overlay */
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      grad.addColorStop(0, 'rgba(25,118,210,0.25)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      roundRect(ctx, 0, 0, size, size, size * 0.18);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      /* Fish emoji */
+      const emojiSize = Math.round(size * 0.58);
+      ctx.font = `${emojiSize}px serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🐟', size / 2, size / 2 + size * 0.03);
+
+      /* App name text for larger sizes */
+      if (size >= 128) {
+        const textSize = Math.round(size * 0.11);
+        ctx.font = `bold ${textSize}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('سمكنا', size / 2, size - size * 0.09);
+      }
+    }
+
+    /* ─── Rounded rectangle helper ─── */
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h,     x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y,         x + r, y);
+      ctx.closePath();
+    }
+
+    /* ─── Download a single canvas as PNG ─── */
+    function downloadCanvas(canvas, size) {
+      const link = document.createElement('a');
+      link.download = `icon-${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    /* ─── Download all icons with small delays ─── */
+    async function downloadAll() {
+      const canvases = document.querySelectorAll('canvas[data-size]');
+      for (let i = 0; i < canvases.length; i++) {
+        const canvas = canvases[i];
+        const size   = parseInt(canvas.dataset.size);
+        await new Promise(resolve => setTimeout(resolve, i * 150));
+        downloadCanvas(canvas, size);
+      }
+    }
+
+    /* ─── Build the preview grid ─── */
+    function buildGrid() {
+      const grid = document.getElementById('icons-grid');
+
+      SIZES.forEach(size => {
+        /* Canvas */
+        const canvas = document.createElement('canvas');
+        canvas.dataset.size = size;
+        const displaySize = Math.min(size, 120);
+        canvas.style.width  = displaySize + 'px';
+        canvas.style.height = displaySize + 'px';
+        drawIcon(canvas, size);
+
+        /* Card */
+        const card = document.createElement('div');
+        card.className = 'icon-card';
+
+        const label = document.createElement('div');
+        label.className = 'icon-label';
+        label.textContent = `${size} × ${size} px`;
+
+        const btn = document.createElement('button');
+        btn.className = 'dl-btn';
+        btn.textContent = `⬇️ تحميل icon-${size}.png`;
+        btn.onclick = () => downloadCanvas(canvas, size);
+
+        card.appendChild(canvas);
+        card.appendChild(label);
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+    }
+
+    buildGrid();
+  </script>
+</body>
+</html>
