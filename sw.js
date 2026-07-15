@@ -1,4 +1,4 @@
-const CACHE = 'khazraji-v1';
+const CACHE = 'khazraji-v3';
 const ASSETS = ['./', './index.html', './js/app.js', './manifest.json'];
 
 self.addEventListener('install', e => {
